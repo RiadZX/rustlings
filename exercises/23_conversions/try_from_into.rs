@@ -5,7 +5,7 @@
 // https://doc.rust-lang.org/std/convert/trait.TryFrom.html
 
 #![allow(clippy::useless_vec)]
-use std::convert::{TryFrom, TryInto};
+use std::{any::type_name, convert::{TryFrom, TryInto}};
 
 #[derive(Debug, PartialEq)]
 struct Color {
@@ -28,14 +28,37 @@ enum IntoColorError {
 impl TryFrom<(i16, i16, i16)> for Color {
     type Error = IntoColorError;
 
-    fn try_from(tuple: (i16, i16, i16)) -> Result<Self, Self::Error> {}
+    fn try_from(tuple: (i16, i16, i16)) -> Result<Self, Self::Error> {
+        let (Ok(red), Ok(green), Ok(blue)) = (
+            u8::try_from(tuple.0),
+            u8::try_from(tuple.1),
+            u8::try_from(tuple.2),
+        ) else {
+            return Err(IntoColorError::IntConversion);
+        };
+
+        Ok(Self { red, green, blue })
+    }
 }
 
 // TODO: Array implementation.
 impl TryFrom<[i16; 3]> for Color {
     type Error = IntoColorError;
 
-    fn try_from(arr: [i16; 3]) -> Result<Self, Self::Error> {}
+    fn try_from(arr: [i16; 3]) -> Result<Self, Self::Error> {
+        if arr[0] < 0 || arr[1] < 0 || arr[2] < 0 {
+            return Err(IntoColorError::IntConversion);
+        }
+        if arr[0] > 255 || arr[1] > 255 || arr[2] > 255 {
+            return Err(IntoColorError::IntConversion);
+        }
+
+        Ok(Color{
+            red: arr[0] as u8,
+            green: arr[1] as u8,
+            blue: arr[2] as u8
+        })
+    }
 }
 
 // TODO: Slice implementation.
@@ -43,7 +66,23 @@ impl TryFrom<[i16; 3]> for Color {
 impl TryFrom<&[i16]> for Color {
     type Error = IntoColorError;
 
-    fn try_from(slice: &[i16]) -> Result<Self, Self::Error> {}
+    fn try_from(slice: &[i16]) -> Result<Self, Self::Error> {
+        if slice.len() < 3 || slice.len() > 3 {
+            return Err(IntoColorError::BadLen);
+        }
+        if slice[0] < 0 || slice[1] < 0 || slice[2] < 0 {
+            return Err(IntoColorError::IntConversion);
+        }
+        if slice[0] > 255 || slice[1] > 255 || slice[2] > 255 {
+            return Err(IntoColorError::IntConversion);
+        }
+
+        Ok(Color{
+            red: slice[0] as u8,
+            green: slice[1] as u8,
+            blue: slice[2] as u8
+        })
+    }
 }
 
 fn main() {
